@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roue des émotions</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8f7f4;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .app {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+      padding: 2rem 1.5rem;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 { font-size: 20px; font-weight: 600; color: #2c2c2a; margin-bottom: 0.25rem; }
+    .subtitle { font-size: 13px; color: #aaa; margin-bottom: 1.5rem; }
+    .instruction {
+      font-size: 15px;
+      color: #555;
+      margin-bottom: 1.25rem;
+      min-height: 24px;
+      font-weight: 500;
+    }
+    .instruction.ready { color: #1D9E75; font-weight: 700; }
+
+    /* Roue */
+    .wheel-wrapper {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 0 auto 1.5rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .wheel-needle {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-top: 30px solid #D85A30;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+      z-index: 10;
+    }
+    .wheel-pulse {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      border: 3px solid #1D9E75;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .wheel-wrapper.idle .wheel-pulse {
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.96); opacity: 0.5; }
+      70% { transform: scale(1.06); opacity: 0; }
+      100% { transform: scale(0.96); opacity: 0; }
+    }
+    .wheel-wrapper.idle:hover canvas { opacity: 0.9; }
+    canvas { border-radius: 50%; display: block; transition: opacity 0.2s; }
+
+    /* Tap hint au centre */
+    .tap-hint {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border-radius: 50%;
+      width: 56px; height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      pointer-events: none;
+      transition: transform 0.2s;
+    }
+    .wheel-wrapper.idle:hover .tap-hint { transform: translate(-50%, -50%) scale(1.1); }
+    .wheel-wrapper.spinning .tap-hint { display: none; }
+
+    /* Résultat */
+    .result-card {
+      background: #f8f7f4;
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      margin: 0 auto 1.25rem;
+      max-width: 340px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .result-emotion { font-size: 26px; font-weight: 700; color: #2c2c2a; }
+    .result-question { font-size: 14px; color: #666; line-height: 1.6; margin: 0; }
+
+    .reset-btn {
+      font-size: 13px;
+      color: #888;
+      background: none;
+      border: 1px solid #d3d1c7;
+      border-radius: 8px;
+      padding: 8px 18px;
+      cursor: pointer;
+      display: none;
+    }
+    .reset-btn:hover { background: #f1efe8; }
+    .footer { margin-top: 1.5rem; font-size: 11px; color: #bbb; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>Roue des émotions</h1>
+  <p class="subtitle">Tape sur la roue pour la faire tourner</p>
+
+  <p class="instruction idle" id="instr">👇 Tape sur la roue !</p>
+
+  <div class="wheel-wrapper idle" id="wheelWrapper" onclick="spin()">
+    <div class="wheel-pulse"></div>
+    <div class="wheel-needle"></div>
+    <canvas id="wheelCanvas" width="300" height="300"></canvas>
+    <div class="tap-hint" id="tapHint">👆</div>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <span class="result-emotion" id="resultEmotion"></span>
+    <p class="result-question" id="resultQuestion"></p>
+  </div>
+
+  <button class="reset-btn" id="resetBtn" onclick="reset()">↩ Recommencer</button>
+
+  <p class="footer">patriciapsy.fr</p>
+</div>
+
+<script>
+const emotions = [
+  { mot: "Inquiète",   question: "Est-ce qu'il y a quelque chose qui t'inquiète en ce moment ?",                  color: "#F5C4B3" },
+  { mot: "Fière",      question: "De quoi tu es fière cette semaine, même d'une petite chose ?",                  color: "#9FE1CB" },
+  { mot: "Débordée",   question: "Qu'est-ce qui te donne l'impression d'avoir trop à gérer ?",                    color: "#AFA9EC" },
+  { mot: "Joyeuse",    question: "Qu'est-ce qui t'a rendue joyeuse récemment ?",                                  color: "#C0DD97" },
+  { mot: "Incomprise", question: "Est-ce qu'il y a des moments où tu te sens incomprise ?",                       color: "#F4C0D1" },
+  { mot: "Soulagée",   question: "Y a-t-il quelque chose dont tu t'es sentie soulagée dernièrement ?",            color: "#FAC775" },
+  { mot: "En colère",  question: "Qu'est-ce qui peut te mettre en colère ? Comment ça se passe dans ton corps ?", color: "#F7C1C1" },
+  { mot: "Triste",     question: "Est-ce que tu peux me parler d'un moment où tu t'es sentie triste ?",          color: "#B5D4F4" }
+];
+
+let spinning = false;
+let currentAngle = 0;
+
+function drawWheel(angle) {
+  const canvas = document.getElementById('wheelCanvas');
+  const ctx = canvas.getContext('2d');
+  const cx = 150, cy = 150, r = 138;
+  const slice = (2 * Math.PI) / 8;
+  ctx.clearRect(0, 0, 300, 300);
+  emotions.forEach((e, i) => {
+    const start = angle + i * slice;
+    const end = start + slice;
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = e.color; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(start + slice / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#333';
+    ctx.font = '600 14px -apple-system, sans-serif';
+    ctx.fillText(e.mot, r - 14, 5);
+    ctx.restore();
+  });
+  // Centre
+  ctx.beginPath(); ctx.arc(cx, cy, 24, 0, 2*Math.PI);
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+function spin() {
+  if (spinning) return;
+  spinning = true;
+
+  const wrapper = document.getElementById('wheelWrapper');
+  wrapper.classList.remove('idle');
+  wrapper.classList.add('spinning');
+  document.getElementById('tapHint').style.display = 'none';
+  document.getElementById('instr').textContent = 'La roue tourne...';
+  document.getElementById('instr').classList.remove('idle');
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('resetBtn').style.display = 'none';
+
+  const targetIdx = Math.floor(Math.random() * 8);
+  const slice = (2 * Math.PI) / 8;
+  const needleAngle = -Math.PI / 2;
+  const targetAngle = needleAngle - (targetIdx * slice + slice / 2);
+  const extraSpins = (4 + Math.random() * 2) * 2 * Math.PI;
+  const finalAngle = targetAngle - extraSpins;
+  const duration = 3800;
+  const start = performance.now();
+
+  function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+
+  function animate(now) {
+    const t = Math.min((now - start) / duration, 1);
+    currentAngle = finalAngle * easeOut(t);
+    drawWheel(currentAngle);
+    if (t < 1) { requestAnimationFrame(animate); }
+    else {
+      spinning = false;
+      setTimeout(() => showResult(targetIdx), 500);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function showResult(idx) {
+  const e = emotions[idx];
+  document.getElementById('resultEmotion').textContent = e.mot;
+  document.getElementById('resultQuestion').textContent = e.question;
+  document.getElementById('resultCard').style.display = 'flex';
+  document.getElementById('resetBtn').style.display = 'inline-block';
+  document.getElementById('instr').textContent = '';
+}
+
+function reset() {
+  spinning = false;
+  currentAngle = 0;
+  const wrapper = document.getElementById('wheelWrapper');
+  wrapper.classList.add('idle');
+  wrapper.classList.remove('spinning');
+  document.getElementById('tapHint').style.display = 'flex';
+  document.getElementById('instr').textContent = '👇 Tape sur la roue !';
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('resetBtn').style.display = 'none';
+  drawWheel(0);
+}
+
+// Dessin initial
+drawWheel(0);
+</script>
+</body>
+</html>
