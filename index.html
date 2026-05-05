@@ -33,9 +33,7 @@
       min-height: 24px;
       font-weight: 500;
     }
-    .instruction.ready { color: #1D9E75; font-weight: 700; }
 
-    /* Roue */
     .wheel-wrapper {
       position: relative;
       width: 300px;
@@ -72,10 +70,8 @@
       70% { transform: scale(1.06); opacity: 0; }
       100% { transform: scale(0.96); opacity: 0; }
     }
-    .wheel-wrapper.idle:hover canvas { opacity: 0.9; }
-    canvas { border-radius: 50%; display: block; transition: opacity 0.2s; }
+    canvas { border-radius: 50%; display: block; }
 
-    /* Tap hint au centre */
     .tap-hint {
       position: absolute;
       top: 50%; left: 50%;
@@ -89,12 +85,8 @@
       font-size: 24px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       pointer-events: none;
-      transition: transform 0.2s;
     }
-    .wheel-wrapper.idle:hover .tap-hint { transform: translate(-50%, -50%) scale(1.1); }
-    .wheel-wrapper.spinning .tap-hint { display: none; }
 
-    /* Résultat */
     .result-card {
       background: #f8f7f4;
       border-radius: 16px;
@@ -127,8 +119,7 @@
 <div class="app">
   <h1>Roue des émotions</h1>
   <p class="subtitle">Tape sur la roue pour la faire tourner</p>
-
-  <p class="instruction idle" id="instr">👇 Tape sur la roue !</p>
+  <p class="instruction" id="instr">👇 Tape sur la roue !</p>
 
   <div class="wheel-wrapper idle" id="wheelWrapper" onclick="spin()">
     <div class="wheel-pulse"></div>
@@ -143,7 +134,6 @@
   </div>
 
   <button class="reset-btn" id="resetBtn" onclick="reset()">↩ Recommencer</button>
-
   <p class="footer">patriciapsy.fr</p>
 </div>
 
@@ -159,6 +149,13 @@ const emotions = [
   { mot: "Triste",     question: "Est-ce que tu peux me parler d'un moment où tu t'es sentie triste ?",          color: "#B5D4F4" }
 ];
 
+const N = emotions.length;
+const SLICE = (2 * Math.PI) / N;
+// L'aiguille pointe vers le haut = -PI/2
+// On dessine la roue à partir de -PI/2 - SLICE/2 pour que
+// la première émotion soit centrée sous l'aiguille au départ
+const START_OFFSET = -Math.PI / 2 - SLICE / 2;
+
 let spinning = false;
 let currentAngle = 0;
 
@@ -166,27 +163,47 @@ function drawWheel(angle) {
   const canvas = document.getElementById('wheelCanvas');
   const ctx = canvas.getContext('2d');
   const cx = 150, cy = 150, r = 138;
-  const slice = (2 * Math.PI) / 8;
   ctx.clearRect(0, 0, 300, 300);
+
   emotions.forEach((e, i) => {
-    const start = angle + i * slice;
-    const end = start + slice;
+    const start = START_OFFSET + angle + i * SLICE;
+    const end = start + SLICE;
     ctx.beginPath(); ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, start, end);
     ctx.closePath();
     ctx.fillStyle = e.color; ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2.5; ctx.stroke();
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(start + slice / 2);
+
+    // Texte au milieu du secteur
+    const midAngle = start + SLICE / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(midAngle);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#333';
-    ctx.font = '600 14px -apple-system, sans-serif';
-    ctx.fillText(e.mot, r - 14, 5);
+    ctx.font = '600 13px -apple-system, sans-serif';
+    ctx.fillText(e.mot, r - 12, 5);
     ctx.restore();
   });
-  // Centre
-  ctx.beginPath(); ctx.arc(cx, cy, 24, 0, 2*Math.PI);
+
+  // Centre blanc
+  ctx.beginPath(); ctx.arc(cx, cy, 24, 0, 2 * Math.PI);
   ctx.fillStyle = '#fff'; ctx.fill();
   ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+function getWinnerIndex(finalAngle) {
+  // L'aiguille est à -PI/2 (haut)
+  // On cherche quel secteur est sous l'aiguille
+  // La roue a tourné de finalAngle, les secteurs commencent à START_OFFSET + finalAngle
+  // On normalise l'angle de l'aiguille par rapport à la roue
+  const needle = -Math.PI / 2;
+  // Angle relatif dans le référentiel de la roue
+  let rel = needle - (START_OFFSET + finalAngle);
+  // Normaliser entre 0 et 2PI
+  rel = ((rel % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  // Index du secteur
+  return Math.floor(rel / SLICE) % N;
 }
 
 function spin() {
@@ -195,32 +212,34 @@ function spin() {
 
   const wrapper = document.getElementById('wheelWrapper');
   wrapper.classList.remove('idle');
-  wrapper.classList.add('spinning');
   document.getElementById('tapHint').style.display = 'none';
   document.getElementById('instr').textContent = 'La roue tourne...';
-  document.getElementById('instr').classList.remove('idle');
   document.getElementById('resultCard').style.display = 'none';
   document.getElementById('resetBtn').style.display = 'none';
 
-  const targetIdx = Math.floor(Math.random() * 8);
-  const slice = (2 * Math.PI) / 8;
-  const needleAngle = -Math.PI / 2;
-  const targetAngle = needleAngle - (targetIdx * slice + slice / 2);
+  // Angle aléatoire — entre 4 et 6 tours complets + position aléatoire
   const extraSpins = (4 + Math.random() * 2) * 2 * Math.PI;
-  const finalAngle = targetAngle - extraSpins;
+  const randomStop = Math.random() * 2 * Math.PI;
+  const finalAngle = currentAngle + extraSpins + randomStop;
+
   const duration = 3800;
-  const start = performance.now();
+  const startTime = performance.now();
+  const startAngle = currentAngle;
 
   function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
 
   function animate(now) {
-    const t = Math.min((now - start) / duration, 1);
-    currentAngle = finalAngle * easeOut(t);
+    const t = Math.min((now - startTime) / duration, 1);
+    currentAngle = startAngle + (finalAngle - startAngle) * easeOut(t);
     drawWheel(currentAngle);
-    if (t < 1) { requestAnimationFrame(animate); }
-    else {
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      currentAngle = finalAngle;
       spinning = false;
-      setTimeout(() => showResult(targetIdx), 500);
+      // Calculer le gagnant APRÈS la fin de l'animation
+      const winner = getWinnerIndex(finalAngle);
+      setTimeout(() => showResult(winner), 500);
     }
   }
   requestAnimationFrame(animate);
@@ -240,7 +259,6 @@ function reset() {
   currentAngle = 0;
   const wrapper = document.getElementById('wheelWrapper');
   wrapper.classList.add('idle');
-  wrapper.classList.remove('spinning');
   document.getElementById('tapHint').style.display = 'flex';
   document.getElementById('instr').textContent = '👇 Tape sur la roue !';
   document.getElementById('resultCard').style.display = 'none';
@@ -248,7 +266,6 @@ function reset() {
   drawWheel(0);
 }
 
-// Dessin initial
 drawWheel(0);
 </script>
 </body>
