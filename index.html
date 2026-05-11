@@ -20,99 +20,58 @@
       border-radius: 20px;
       box-shadow: 0 2px 20px rgba(0,0,0,0.08);
       padding: 2rem 1.5rem;
-      max-width: 420px;
+      max-width: 460px;
       width: 100%;
       text-align: center;
     }
     h1 { font-size: 20px; font-weight: 600; color: #2c2c2a; margin-bottom: 0.25rem; }
-    .subtitle { font-size: 13px; color: #aaa; margin-bottom: 1.5rem; }
-    .instruction {
-      font-size: 15px;
-      color: #555;
-      margin-bottom: 1.25rem;
-      min-height: 24px;
-      font-weight: 500;
-    }
+    .subtitle { font-size: 13px; color: #aaa; margin-bottom: 1.25rem; }
+    .instruction { font-size: 15px; color: #555; margin-bottom: 0.75rem; min-height: 24px; font-weight: 500; }
+
+    .progress { display: flex; justify-content: center; gap: 5px; margin-bottom: 0.4rem; flex-wrap: wrap; }
+    .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: #e8e6e0; transition: background 0.3s; }
+    .progress-dot.done { background: #1D9E75; }
+    .progress-label { font-size: 11px; color: #bbb; margin-bottom: 1rem; min-height: 16px; }
 
     .wheel-wrapper {
-      position: relative;
-      width: 300px;
-      height: 300px;
-      margin: 0 auto 1.5rem;
-      cursor: pointer;
-      user-select: none;
+      position: relative; width: 320px; height: 320px;
+      margin: 0 auto 1.25rem; cursor: pointer; user-select: none;
     }
     .wheel-needle {
-      position: absolute;
-      top: -10px;
-      left: 50%;
-      transform: translateX(-50%);
+      position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
       width: 0; height: 0;
-      border-left: 12px solid transparent;
-      border-right: 12px solid transparent;
+      border-left: 12px solid transparent; border-right: 12px solid transparent;
       border-top: 30px solid #D85A30;
-      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
-      z-index: 10;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2)); z-index: 10;
     }
     .wheel-pulse {
-      position: absolute;
-      inset: -8px;
-      border-radius: 50%;
-      border: 3px solid #1D9E75;
-      opacity: 0;
-      pointer-events: none;
+      position: absolute; inset: -8px; border-radius: 50%;
+      border: 3px solid #1D9E75; opacity: 0; pointer-events: none;
     }
-    .wheel-wrapper.idle .wheel-pulse {
-      animation: pulse 1.8s ease-in-out infinite;
-    }
+    .wheel-wrapper.idle .wheel-pulse { animation: pulse 1.8s ease-in-out infinite; }
     @keyframes pulse {
       0% { transform: scale(0.96); opacity: 0.5; }
       70% { transform: scale(1.06); opacity: 0; }
       100% { transform: scale(0.96); opacity: 0; }
     }
     canvas { border-radius: 50%; display: block; }
-
     .tap-hint {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: #fff;
-      border-radius: 50%;
-      width: 56px; height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      pointer-events: none;
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: #fff; border-radius: 50%; width: 56px; height: 56px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      pointer-events: none; transition: opacity 0.3s;
     }
-
     .result-card {
-      background: #f8f7f4;
-      border-radius: 16px;
-      padding: 1.25rem 1.5rem;
-      margin: 0 auto 1.25rem;
-      max-width: 340px;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
+      background: #f8f7f4; border-radius: 16px; padding: 1.25rem 1.5rem;
+      margin: 0 auto 0.75rem; max-width: 360px;
+      display: none; flex-direction: column; align-items: center; gap: 8px;
     }
     .result-emotion { font-size: 26px; font-weight: 700; color: #2c2c2a; }
-    .result-question { font-size: 14px; color: #666; line-height: 1.6; margin: 0; }
-
-    .reset-btn {
-      font-size: 13px;
-      color: #888;
-      background: none;
-      border: 1px solid #d3d1c7;
-      border-radius: 8px;
-      padding: 8px 18px;
-      cursor: pointer;
-      display: none;
-    }
-    .reset-btn:hover { background: #f1efe8; }
-    .footer { margin-top: 1.5rem; font-size: 11px; color: #bbb; }
+    .result-definition { font-size: 13px; color: #999; font-style: italic; line-height: 1.5; margin: 0; display: none; }
+    .result-question { font-size: 14px; color: #555; line-height: 1.6; margin: 0; font-weight: 500; }
+    .result-hint { font-size: 12px; color: #bbb; margin-top: 4px; }
+    .footer { margin-top: 1rem; font-size: 11px; color: #bbb; }
   </style>
 </head>
 <body>
@@ -120,112 +79,188 @@
   <h1>Roue des émotions</h1>
   <p class="subtitle">Tape sur la roue pour la faire tourner</p>
   <p class="instruction" id="instr">👇 Tape sur la roue !</p>
+  <div class="progress" id="progressDots"></div>
+  <p class="progress-label" id="progressLabel"></p>
 
   <div class="wheel-wrapper idle" id="wheelWrapper" onclick="spin()">
     <div class="wheel-pulse"></div>
     <div class="wheel-needle"></div>
-    <canvas id="wheelCanvas" width="300" height="300"></canvas>
+    <canvas id="wheelCanvas" width="320" height="320"></canvas>
     <div class="tap-hint" id="tapHint">👆</div>
   </div>
 
   <div class="result-card" id="resultCard">
     <span class="result-emotion" id="resultEmotion"></span>
+    <p class="result-definition" id="resultDefinition"></p>
     <p class="result-question" id="resultQuestion"></p>
+    <p class="result-hint">👆 Tape sur la roue pour continuer</p>
   </div>
 
-  <button class="reset-btn" id="resetBtn" onclick="reset()">↩ Recommencer</button>
   <p class="footer">patriciapsy.fr</p>
 </div>
 
 <script>
 const emotions = [
-  { mot: "Inquiète",   question: "Est-ce qu'il y a quelque chose qui t'inquiète en ce moment ?",                  color: "#F5C4B3" },
-  { mot: "Fière",      question: "De quoi tu es fière cette semaine, même d'une petite chose ?",                  color: "#9FE1CB" },
-  { mot: "Débordée",   question: "Qu'est-ce qui te donne l'impression d'avoir trop à gérer ?",                    color: "#AFA9EC" },
-  { mot: "Joyeuse",    question: "Qu'est-ce qui t'a rendue joyeuse récemment ?",                                  color: "#C0DD97" },
-  { mot: "Incomprise", question: "Est-ce qu'il y a des moments où tu te sens incomprise ?",                       color: "#F4C0D1" },
-  { mot: "Soulagée",   question: "Y a-t-il quelque chose dont tu t'es sentie soulagée dernièrement ?",            color: "#FAC775" },
-  { mot: "En colère",  question: "Qu'est-ce qui peut te mettre en colère ? Comment ça se passe dans ton corps ?", color: "#F7C1C1" },
-  { mot: "Triste",     question: "Est-ce que tu peux me parler d'un moment où tu t'es sentie triste ?",          color: "#B5D4F4" }
+  {
+    mot: "Frustrée",
+    definition: "La frustration c'est quand on veut quelque chose et qu'on ne peut pas l'avoir.",
+    question: "Est-ce que tu vois des moments comme ça dans ta vie ?",
+    color: "#F5C4B3"
+  },
+  {
+    mot: "Joyeuse",
+    definition: "",
+    question: "Qu'est-ce qui t'a rendue joyeuse récemment ?",
+    color: "#C0DD97"
+  },
+  {
+    mot: "Seule",
+    definition: "",
+    question: "Est-ce qu'il y a des moments où tu te sens seule, même entourée de gens ?",
+    color: "#B5D4F4"
+  },
+  {
+    mot: "Fière",
+    definition: "",
+    question: "De quoi tu es fière en ce moment, même d'une toute petite chose ?",
+    color: "#9FE1CB"
+  },
+  {
+    mot: "En colère",
+    definition: "",
+    question: "Est-ce qu'il y a quelque chose qui t'a mise en colère dernièrement ?",
+    color: "#F7C1C1"
+  },
+  {
+    mot: "Légère",
+    definition: "",
+    question: "Est-ce qu'il y a des moments où tu te sens légère, sans souci ? C'est quoi ces moments ?",
+    color: "#FFF0A0"
+  },
+  {
+    mot: "Honteuse",
+    definition: "La honte c'est quand on a peur que les autres nous jugent ou nous trouvent ridicules, et qu'on voudrait disparaître.",
+    question: "Est-ce que tu as déjà ressenti ça ?",
+    color: "#E8C4E8"
+  },
+  {
+    mot: "Soulagée",
+    definition: "",
+    question: "Y a-t-il quelque chose dont tu t'es sentie soulagée récemment ?",
+    color: "#FAC775"
+  },
+  {
+    mot: "Inquiète",
+    definition: "",
+    question: "Est-ce qu'il y a quelque chose qui t'inquiète en ce moment ?",
+    color: "#AFA9EC"
+  },
+  {
+    mot: "Déçue",
+    definition: "",
+    question: "Est-ce qu'il y a quelqu'un ou quelque chose qui t'a déçue récemment ?",
+    color: "#F4C0D1"
+  },
+  {
+    mot: "Triste",
+    definition: "",
+    question: "Est-ce que tu peux me parler d'un moment où tu t'es sentie triste ?",
+    color: "#A8D4F0"
+  },
+  {
+    mot: "Débordée",
+    definition: "Débordée c'est quand il y a trop de choses en même temps et qu'on ne sait plus par où commencer.",
+    question: "Est-ce que tu reconnais ça dans ta vie en ce moment ?",
+    color: "#C8E6C9"
+  }
 ];
 
 const N = emotions.length;
 const SLICE = (2 * Math.PI) / N;
-// L'aiguille pointe vers le haut = -PI/2
-// On dessine la roue à partir de -PI/2 - SLICE/2 pour que
-// la première émotion soit centrée sous l'aiguille au départ
-const START_OFFSET = -Math.PI / 2 - SLICE / 2;
 
 let spinning = false;
 let currentAngle = 0;
+let deck = [], done = [];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function refillDeck() { deck = shuffle([...Array(N).keys()]); done = []; }
+function nextFromDeck() { if (!deck.length) refillDeck(); return deck.pop(); }
 
 function drawWheel(angle) {
   const canvas = document.getElementById('wheelCanvas');
   const ctx = canvas.getContext('2d');
-  const cx = 150, cy = 150, r = 138;
-  ctx.clearRect(0, 0, 300, 300);
-
+  const cx = 160, cy = 160, r = 148;
+  ctx.clearRect(0, 0, 320, 320);
   emotions.forEach((e, i) => {
-    const start = START_OFFSET + angle + i * SLICE;
-    const end = start + SLICE;
+    const start = angle + i * SLICE - Math.PI / 2;
+    const end   = angle + (i + 1) * SLICE - Math.PI / 2;
     ctx.beginPath(); ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, r, start, end);
     ctx.closePath();
     ctx.fillStyle = e.color; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2.5; ctx.stroke();
-
-    // Texte au milieu du secteur
-    const midAngle = start + SLICE / 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2; ctx.stroke();
+    const mid = angle + (i + 0.5) * SLICE - Math.PI / 2;
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(midAngle);
+    ctx.rotate(mid);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#333';
-    ctx.font = '600 13px -apple-system, sans-serif';
-    ctx.fillText(e.mot, r - 12, 5);
+    ctx.font = '600 12px -apple-system, sans-serif';
+    ctx.fillText(e.mot, r - 10, 4);
     ctx.restore();
   });
-
-  // Centre blanc
   ctx.beginPath(); ctx.arc(cx, cy, 24, 0, 2 * Math.PI);
   ctx.fillStyle = '#fff'; ctx.fill();
   ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1; ctx.stroke();
 }
 
-function getWinnerIndex(finalAngle) {
-  // L'aiguille est à -PI/2 (haut)
-  // On cherche quel secteur est sous l'aiguille
-  // La roue a tourné de finalAngle, les secteurs commencent à START_OFFSET + finalAngle
-  // On normalise l'angle de l'aiguille par rapport à la roue
-  const needle = -Math.PI / 2;
-  // Angle relatif dans le référentiel de la roue
-  let rel = needle - (START_OFFSET + finalAngle);
-  // Normaliser entre 0 et 2PI
-  rel = ((rel % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-  // Index du secteur
-  return Math.floor(rel / SLICE) % N;
+function getWinnerIndex(angle) {
+  let needle = ((-angle) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.floor(needle / SLICE) % N;
+}
+
+function updateProgress() {
+  const dots = document.getElementById('progressDots');
+  const label = document.getElementById('progressLabel');
+  dots.innerHTML = '';
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement('div');
+    d.className = 'progress-dot' + (i < done.length ? ' done' : '');
+    dots.appendChild(d);
+  }
+  if (!done.length) label.textContent = '';
+  else if (done.length === N) label.textContent = '✨ Toutes les émotions explorées ! La roue se renouvelle...';
+  else label.textContent = done.length + ' sur ' + N + ' émotions explorées';
 }
 
 function spin() {
   if (spinning) return;
   spinning = true;
 
-  const wrapper = document.getElementById('wheelWrapper');
-  wrapper.classList.remove('idle');
-  document.getElementById('tapHint').style.display = 'none';
+  document.getElementById('wheelWrapper').classList.remove('idle');
+  document.getElementById('tapHint').style.opacity = '0';
   document.getElementById('instr').textContent = 'La roue tourne...';
   document.getElementById('resultCard').style.display = 'none';
-  document.getElementById('resetBtn').style.display = 'none';
 
-  // Angle aléatoire — entre 4 et 6 tours complets + position aléatoire
-  const extraSpins = (4 + Math.random() * 2) * 2 * Math.PI;
-  const randomStop = Math.random() * 2 * Math.PI;
-  const finalAngle = currentAngle + extraSpins + randomStop;
+  const targetIdx = nextFromDeck();
+  done.push(targetIdx);
+
+  const targetAngleInWheel = (targetIdx + 0.5) * SLICE;
+  const minSpins = (4 + Math.random()) * 2 * Math.PI;
+  let base = -targetAngleInWheel;
+  while (base < currentAngle + minSpins) base += 2 * Math.PI;
+  const finalAngle = base;
 
   const duration = 3800;
   const startTime = performance.now();
   const startAngle = currentAngle;
-
   function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
 
   function animate(now) {
@@ -236,10 +271,12 @@ function spin() {
       requestAnimationFrame(animate);
     } else {
       currentAngle = finalAngle;
+      drawWheel(currentAngle);
       spinning = false;
-      // Calculer le gagnant APRÈS la fin de l'animation
-      const winner = getWinnerIndex(finalAngle);
-      setTimeout(() => showResult(winner), 500);
+      updateProgress();
+      if (done.length === N) setTimeout(() => { refillDeck(); updateProgress(); }, 2500);
+      const realWinner = getWinnerIndex(currentAngle);
+      setTimeout(() => showResult(realWinner), 500);
     }
   }
   requestAnimationFrame(animate);
@@ -248,24 +285,22 @@ function spin() {
 function showResult(idx) {
   const e = emotions[idx];
   document.getElementById('resultEmotion').textContent = e.mot;
+  const defEl = document.getElementById('resultDefinition');
+  if (e.definition) {
+    defEl.textContent = e.definition;
+    defEl.style.display = 'block';
+  } else {
+    defEl.style.display = 'none';
+  }
   document.getElementById('resultQuestion').textContent = e.question;
   document.getElementById('resultCard').style.display = 'flex';
-  document.getElementById('resetBtn').style.display = 'inline-block';
   document.getElementById('instr').textContent = '';
+  document.getElementById('wheelWrapper').classList.add('idle');
+  document.getElementById('tapHint').style.opacity = '1';
 }
 
-function reset() {
-  spinning = false;
-  currentAngle = 0;
-  const wrapper = document.getElementById('wheelWrapper');
-  wrapper.classList.add('idle');
-  document.getElementById('tapHint').style.display = 'flex';
-  document.getElementById('instr').textContent = '👇 Tape sur la roue !';
-  document.getElementById('resultCard').style.display = 'none';
-  document.getElementById('resetBtn').style.display = 'none';
-  drawWheel(0);
-}
-
+refillDeck();
+updateProgress();
 drawWheel(0);
 </script>
 </body>
