@@ -72,9 +72,50 @@
     .result-question { font-size: 14px; color: #555; line-height: 1.6; margin: 0; font-weight: 500; }
     .result-hint { font-size: 12px; color: #bbb; margin-top: 4px; }
     .footer { margin-top: 1rem; font-size: 11px; color: #bbb; }
+
+    /* Cycle complete overlay */
+    .cycle-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      align-items: center; justify-content: center;
+      z-index: 200; padding: 1rem;
+    }
+    .cycle-overlay.open { display: flex; }
+    .cycle-card {
+      background: #fff; border-radius: 20px;
+      padding: 2.5rem 2rem; width: 100%; max-width: 340px;
+      text-align: center;
+      animation: popIn 0.4s cubic-bezier(.36,.07,.19,.97);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .cycle-emoji { font-size: 56px; margin-bottom: 1rem; display: block; }
+    .cycle-title { font-size: 20px; font-weight: 700; color: #2c2c2a; margin-bottom: 0.5rem; }
+    .cycle-subtitle { font-size: 14px; color: #888; line-height: 1.6; margin-bottom: 1.5rem; }
+    .cycle-progress { font-size: 13px; color: #1D9E75; font-weight: 600; margin-bottom: 1.5rem; }
+    .cycle-btn {
+      background: #1D9E75; color: #fff; border: none;
+      border-radius: 12px; padding: 14px 28px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      font-family: inherit;
+    }
+    .cycle-btn:hover { background: #0F6E56; }
   </style>
 </head>
 <body>
+<!-- Cycle complete -->
+<div class="cycle-overlay" id="cycleOverlay">
+  <div class="cycle-card">
+    <span class="cycle-emoji">🎉</span>
+    <p class="cycle-title">Bravo !</p>
+    <p class="cycle-subtitle">Tu as exploré toutes les émotions de la roue — c'est beaucoup de courage !</p>
+    <p class="cycle-progress">12 émotions sur 12 ✨</p>
+    <button class="cycle-btn" onclick="hideCycleComplete()">Continuer →</button>
+  </div>
+</div>
+
 <div class="app">
   <h1>Roue des émotions</h1>
   <p class="subtitle">Tape sur la roue pour la faire tourner</p>
@@ -236,7 +277,7 @@ function updateProgress() {
     dots.appendChild(d);
   }
   if (!done.length) label.textContent = '';
-  else if (done.length === N) label.textContent = '✨ Toutes les émotions explorées ! La roue se renouvelle...';
+  else if (done.length === N) label.textContent = '✨ Cycle complet !';
   else label.textContent = done.length + ' sur ' + N + ' émotions explorées';
 }
 
@@ -274,7 +315,10 @@ function spin() {
       drawWheel(currentAngle);
       spinning = false;
       updateProgress();
-      if (done.length === N) setTimeout(() => { refillDeck(); updateProgress(); }, 2500);
+      if (done.length === N) {
+        showCycleComplete();
+        setTimeout(() => { refillDeck(); updateProgress(); hideCycleComplete(); }, 5000);
+      }
       const realWinner = getWinnerIndex(currentAngle);
       setTimeout(() => showResult(realWinner), 500);
     }
@@ -297,6 +341,15 @@ function showResult(idx) {
   document.getElementById('instr').textContent = '';
   document.getElementById('wheelWrapper').classList.add('idle');
   document.getElementById('tapHint').style.opacity = '1';
+}
+
+function showCycleComplete() {
+  document.getElementById('cycleOverlay').classList.add('open');
+}
+function hideCycleComplete() {
+  document.getElementById('cycleOverlay').classList.remove('open');
+  refillDeck();
+  updateProgress();
 }
 
 refillDeck();
